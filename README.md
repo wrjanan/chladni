@@ -1,4 +1,8 @@
 
+# Merged with block chain NFT project, where 1 NFT references to 1 Chladni plate.
+
+See block chain decimals project [here](https://thedecimals.org).
+
 # Chladni plate
 
 See live demo [here](https://luciopaiva.com/chladni).
