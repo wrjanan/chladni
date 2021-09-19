@@ -1,17 +1,63 @@
 
 import * as Utils from "./utils.js";
-import {Debouncer} from "./utils.js";
+import { Debouncer } from "./utils.js";
 
-const NUM_PARTICLES = 30000;
-const DEFAULT_RANDOM_VIBRATION_INTENSITY = 2;
-const MAX_GRADIENT_INTENSITY = .4;
+const MAX_VALUE = 1000000000000000000;
+const keysPrefix = ["FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SIXTH", "SEVENTH", "EIGHTH"]
+const tokenid = 0;
+const text = `${keysPrefix[0]}${tokenid}`;
+
+const intarray = BigInteger.parse(keccak256(text),16);
+const first = intarray.remainder(MAX_VALUE).toString();
+const firstNo = (first) / (MAX_VALUE);
+
+const getDecimal = (number, token) => {
+  const text = `${keysPrefix[number]}${token}`;
+  const intarray = BigInteger.parse(keccak256(text),16);
+  const first = intarray.remainder(MAX_VALUE).toString();
+  return (first) / (MAX_VALUE);
+}
+
+const NUM_PARTICLES = getDecimal(0, tokenid) * 420000;
+const DEFAULT_RANDOM_VIBRATION_INTENSITY = getDecimal(1, tokenid) * 20;
+let MAX_GRADIENT_INTENSITY = getDecimal(2, tokenid) * 100;
 const DEBUG_VIBRATION_LEVELS = false;
 const CANVAS_SCALE = 1.5;
-
+const worker = new Worker("gradient-worker.js");
+        
+const debouce = () => {
+  const debounceTimer = new Debouncer();
+  debounceTimer.set(this.resize.bind(this), 350)
+}
 
 class ChladniApp {
-
-    constructor () {
+    test() {
+        alert();
+    }
+  
+    change(tokenid) {
+        this.tokenId.innerText = tokenid;
+      
+        this.particles = new Float32Array(getDecimal(0, tokenid) * 420000 * 2);
+        this.vibrationIntensity = getDecimal(1, tokenid) * 20;
+        MAX_GRADIENT_INTENSITY = getDecimal(2, tokenid) * 100;
+      
+    }
+  
+    destroy() {
+      
+      this.worker.removeEventListener("message", this.onMessageFromWorker.bind(this));
+      
+      window.removeEventListener("resize", debouce);
+      window.removeEventListener("keypress", this.keypress.bind(this));
+      clearInterval(this.interval);
+      delete this;
+    }
+  
+    constructor(tokenid) {
+        MAX_GRADIENT_INTENSITY = getDecimal(2, tokenid) * 100;
+        this.tokenid = 0;
+      
         this.canvas = document.createElement("canvas");
         this.canvas.classList.add("pixelated");
         this.context = this.canvas.getContext("2d");
@@ -27,7 +73,7 @@ class ChladniApp {
         /** @type {Float32Array} */
         this.gradients = null;
 
-        this.vibrationIntensity = DEFAULT_RANDOM_VIBRATION_INTENSITY;
+        this.vibrationIntensity = getDecimal(1, tokenid) * 20;
         this.halfVibrationIntensity = this.vibrationIntensity / 2;
 
         this.debugVibration = DEBUG_VIBRATION_LEVELS;
@@ -36,9 +82,7 @@ class ChladniApp {
         this.width = window.innerWidth / CANVAS_SCALE;
         this.height = window.innerHeight / CANVAS_SCALE;
 
-        const debounceTimer = new Debouncer();
-
-        this.particles = new Float32Array(NUM_PARTICLES * 2);
+        this.particles = new Float32Array(getDecimal(0, tokenid) * 420000 * 2);
 
         this.nonResonantColor = Utils.cssColorToColor(Utils.readCssVarAsHexNumber("non-resonant-color"));
         this.colorIndex = 0;
@@ -56,21 +100,24 @@ class ChladniApp {
         this.fpsCount = 0;
         this.initStatus();
 
-        this.worker = new Worker("gradient-worker.js");
+        this.worker = worker;
         this.worker.addEventListener("message", this.onMessageFromWorker.bind(this));
 
-        window.addEventListener("resize", () => debounceTimer.set(this.resize.bind(this), 350));
+        window.addEventListener("resize", debouce);
         this.resize();
 
         this.updateFn = this.update.bind(this);
         this.update(performance.now());
 
-        setInterval(this.checkForFallenParticles.bind(this), 10000);
+        this.interval = setInterval(this.checkForFallenParticles.bind(this), 10000);
 
         window.addEventListener("keypress", this.keypress.bind(this));
     }
 
     initStatus() {
+      
+        this.tokenId = document.getElementById("tokenId");
+        this.tokenId.innerText = this.tokenid;
         this.fpsElem = document.getElementById("fps");
         setInterval(() => {
             this.fpsElem.innerText = this.fpsCount.toString(); this.fpsCount = 0;
@@ -193,4 +240,22 @@ class ChladniApp {
     }
 }
 
-new ChladniApp();
+let app = new ChladniApp(0);
+
+document.getElementById("tokenIdButton").onclick = () => {
+  // app.destroy();
+  // document.getElementsByTagName("canvas")[0].remove();
+  // app = new ChladniApp(document.getElementById("tokenIdInput").value );
+  
+  app.change(document.getElementById("tokenIdInput").value);
+  app.resize();
+}
+
+document.getElementById("randomButton").onclick = () => {
+  // app.destroy();
+  // document.getElementsByTagName("canvas")[0].remove();
+  // app = new ChladniApp(document.getElementById("tokenIdInput").value );
+  
+  app.change(Math.floor(Math.random() * 10000));
+  app.resize();
+}
